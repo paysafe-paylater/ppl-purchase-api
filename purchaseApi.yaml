@@ -1,0 +1,1184 @@
+openapi: 3.0.0
+info:
+  title: Purchase API
+  description: |
+    The Purchase API is designed to reflect the full lifecycle of an online purchase.
+
+    AUTHORIZATION
+    -------------
+    3 differrent scopes in this API (merchant, client & single-purchase). The idea behind this is that merchants should be allowed to call all relevant endpoints to manage a purchase whereas clients should only be allowed to call a minimal subset of endpoints that are necessary to apply for credit. In the current implementation access of a client is restricted to only one endpoint: the */initialize* endpoint. For a client to call subsequent endpoints (*/checkPaymentOptions* & */confirmPaymentOptions*) a new JWT token must be used. This token only works for this one initialized purchase and is returned in a response header from the */initialize* call.
+
+  version: "1.0.0"
+tags:
+- name: PurchaseLifecycle
+  description: "handles all necessary steps for a purchase"
+- name: PurchaseAuthorization
+  description: "authorizes a consumer to perform operations on an initialized purchase through a web client"
+- name: Document
+  description: "all documents necessary that need to be approved during PurchaseLifecycle"
+- name: ConsumerIdentification
+  description: third party provider integration for identifying the consumer
+
+x-restygwt-servicerootkey: purchaseapi
+paths:
+  /initialize:
+    post:
+      tags:
+      - PurchaseLifecycle
+      summary: >-
+        STEP 1: Initializes a purchase for a given amount and returns a response with all pre-configured payment options
+      description: |
+        **STEP 1:** Initializes a purchase for a given amount and returns a response with all
+        pre-configured (non-binding) payment options.<br>
+        **AUTHORIZATION SCOPE:** merchant, client.
+      operationId: intializePurchase
+      responses:
+        '200':
+          description: |
+            PurchaseLifecycle endpoints always return the same object with different state of the purchase and different fields populated.
+
+            The initialize operation returns a single-purchase token in the response header <<authorization_token>>. This token has to be used by callers that initialized the purchase with client authorization scope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOperationResponse'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PurchaseInitialization'
+        description: Request object with data needed to initialize a purchase
+        required: true
+  /checkPaymentOptions:
+    post:
+      tags:
+      - PurchaseLifecycle
+      summary: >-
+        STEP 2: Get all suitable payment options for a given consumer
+      description: |
+        **STEP 2:** Get all suitable payment options for a given consumer.<br>
+        **AUTHORIZATION SCOPE:** merchant & single-purchase
+      operationId: checkPaymentOptions
+      responses:
+        '200':
+          description: >-
+            PurchaseLifecycle endpoints return always the same object with different state of the purchase and different fields populated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOperationResponse'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentOptionsRequest'
+        description: "Request object with all data needed to get all suitable payment options for a given consumer"
+        required: true
+  /confirmPaymentOption:
+    post:
+      tags:
+      - PurchaseLifecycle
+      summary: >-
+        STEP 3: Consumer chooses a payment option, confirms selection and applies for credit
+      description: |
+        **STEP 3:** Consumer chooses a payment option, confirms selection and applies for credit.<br>
+        **AUTHORIZATION SCOPE:** merchant & single-purchase"
+      operationId: confirmPaymentOption
+      responses:
+        '200':
+          description: >-
+            PurchaseLifecycle endpoints return always the same object with different state of the purchase and different fields populated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOperationResponse'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentOptionConfirmation'
+        description: Request object holding the id of the confirmed option
+        required: true
+  /capture:
+    post:
+      tags:
+      - PurchaseLifecycle
+      summary: >-
+        STEP 4: Merchant confirms a capture(=shipping) of the purchased goods
+      description: >-
+        **STEP 4:** Merchant confirms a capture(=shipping) of the purchased goods.<br>
+        **AUTHORIZATION SCOPE:** merchant
+      operationId: capture
+      responses:
+        '200':
+          description: >-
+            PurchaseLifecycle endpoints return always the same object with different state of the purchase and different fields populated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOperationResponse'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CaptureRequest'
+        description: All data needed to process a capture(=shipping) of purchased goods
+        required: true
+  /refund:
+    post:
+      tags:
+      - PurchaseLifecycle
+      summary: >-
+        STEP 5: Merchant refunds part of or full purchase in case consumer returned purchased goods
+      description: >-
+        **STEP 5:** Merchant refunds part of or full purchase in case consumer returned purchased goods.<br>
+        **AUTHORIZATION SCOPE:** merchant
+      operationId: refund
+      responses:
+        '200':
+          description: >-
+            PurchaseLifecycle endpoints return always the same object with different state of the purchase and different fields populated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOperationResponse'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefundRequest'
+        description: All data needed to process a refund of a purchase
+        required: true
+  /notify:
+    post:
+      tags:
+        - PurchaseLifecycle
+      summary: >-
+        Sends out the email if calculation and pre-check was done
+      description: >-
+        Sends out the email if calculation and pre-check was done.<br>
+        **AUTHORIZATION SCOPE:** merchant
+      operationId: notify
+      responses:
+        '200':
+          description: >-
+            PurchaseLifecycle endpoints return always the same object with different state of the purchase.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOperationResponse'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotifyRequest'
+        description: All data needed to send a notification email of a purchase
+        required: true
+  /fulfill:
+    post:
+      tags:
+      - PurchaseLifecycle
+      summary: >-
+        Based on amount provided in request the endpoint will call /capture for a positive and /refund for a negative value
+      description: |
+        Based on amount provided in request the endpoint will call /capture for positive amount value and /refund for negative value.<br>
+        **AUTHORIZATION SCOPE:** merchant
+      operationId: fulfill
+      responses:
+        '200':
+          description: >-
+            PurchaseLifecycle endpoints return always the same object with different state of the purchase and different fields populated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOperationResponse'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FulfillRequest'
+        description: All data needed to process a fulfillment
+        required: true
+  '/info/{purchaseId}':
+    get:
+      tags:
+      - PurchaseLifecycle
+      summary: Queries for a purchase by purchaseId
+      description: |
+        Queries for a purchase for a given purchaseId<br>
+        **AUTHORIZATION SCOPE:** merchant & single-purchase
+      operationId: getPurchase
+      parameters:
+      - name: purchaseId
+        in: path
+        description: purchaseId
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: >-
+            PurchaseLifecycle endpoints return always the same object with different state of the purchase and different fields populated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOperationResponse'
+  /authorize/paylater:
+    post:
+      tags:
+      - PurchaseAuthorization
+      summary: >-
+        Authorizes a consumer to perform operations on an initialized purchase through a web client
+      description: |
+        Authorizes a consumer to perform operations on an initialized purchase. An SMS with an authorizaion link will be sent to the consumers mobilephone.<br>
+        **AUTHORIZATION SCOPE:** merchant
+      operationId: authorizePaylater
+      responses:
+        '200':
+          description: |
+            PurchaseAuthorization endpoints always return the same object with different state of the purchase and different fields populated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOperationResponse'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PurchaseAuthorizationRequest'
+        description: Everything needed to start the Authorization Process
+        required: true
+
+  /identify/jumio/initialize:
+    post:
+      tags:
+      - ConsumerIdentification
+      description: Identify consumer with Jumio
+      operationId: jumioIdentification
+      responses:
+        '200':
+          description: Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOperationResponse'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JumioIdentificationRequest'
+        description: >-
+          Request object holding all data needed to identify the consumer with
+          Jumio
+        required: true
+  /document/creditagreement/{purchaseId}:
+    get:
+      tags:
+      - Document
+      description: Generates a creditagreement document.
+      operationId: creditagreement
+      summary: >-
+        Generates a creditagreement document in pdf or html format for a given
+        purchaseId
+      parameters:
+      - name: purchaseId
+        in: path
+        description: Loads/generates the credit agreement document
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Response
+          content:
+            application/pdf:
+              schema:
+                type: object
+                format: binary
+            text/html:
+              schema:
+                type: object
+                format: binary
+  /document/creditagreement/{purchaseId}/{optionId}:
+    get:
+      tags:
+      - Document
+      description: Generates a creditagreement html.
+      operationId: creditagreementHtml
+      summary: >-
+        Generates a creditagreement document in html format for a given
+        purchaseId and optionId
+      parameters:
+      - name: purchaseId
+        in: path
+        description: Loads/generates the credit agreement document
+        required: true
+        schema:
+          type: string
+      - name: optionId
+        in: path
+        description: Loads/generates the credit agreement document
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Response
+          content:
+            text/html:
+              schema:
+                type: object
+                format: binary
+  /document/creditagreement/pdf/{purchaseId}/{optionId}/{copies}:
+    get:
+      tags:
+        - Document
+      description: Generates a creditagreement pdf.
+      operationId: creditagreementPdf
+      summary: >-
+        Generates a creditagreement document in pdf format for a given
+        purchaseId, optionId and copies
+      parameters:
+        - name: purchaseId
+          in: path
+          description: Loads/generates the credit agreement document
+          required: true
+          schema:
+            type: string
+        - name: optionId
+          in: path
+          description: Loads/generates the credit agreement document
+          required: true
+          schema:
+            type: string
+        - name: copies
+          in: path
+          description: Loads/generates the credit agreement document
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Response
+          content:
+            application/pdf:
+              schema:
+                type: object
+                format: binary
+  /document/creditagreement/preview/pdf/{purchaseId}/{optionId}:
+    get:
+      tags:
+        - Document
+      description: Generates a preview creditagreement pdf.
+      operationId: previewcreditagreementPdf
+      summary: >-
+        Generates a preview creditagreement document in pdf format for a given
+        trxId(calcualtionId) and duration
+      parameters:
+        - name: purchaseId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: optionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Response
+          content:
+            application/pdf:
+              schema:
+                type: object
+                format: binary
+  /document/history/creditagreement/pdf/{purchaseIdRest}:
+    get:
+      tags:
+        - Document
+      description: Generates a creditagreement pdf documetn for history functionality.
+      operationId: historycreditagreementPdf
+      summary: >-
+        Generates a history creditagreement document in pdf format for a given purchaseId
+      parameters:
+        - name: purchaseIdRest
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Response
+          content:
+            application/pdf:
+              schema:
+                type: object
+                format: binary
+  /history/creditagreement/all/pdf:
+    get:
+      tags:
+        - Document
+      description: Gets a list of all creaditagreements for logged in user and shop.
+      operationId: getAllCreditagreementsMetadata
+      summary: >-
+        Gets a list of all creaditagreements for logged in user and shop.
+      parameters:
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+        - name: pageNumber
+          in: query
+          schema:
+            type: integer
+            format: int64
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CreditAgreementDocument'
+  /legaldocuments/termsandconditions/{purchaseId}:
+    get:
+      tags:
+        - LegalDocuments
+      description: Generates a termsandconditions html.
+      operationId: termsandconditions
+      summary: >-
+        Generates a termsandconditions document in html format
+      parameters:
+        - name: purchaseId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Response
+          content:
+            text/html:
+              schema:
+                type: object
+                format: binary
+servers:
+- url: 'https://test-gateway.payolution.com/purchase'
+components:
+  schemas:
+    PaymentOptionConfirmation:
+      type: object
+      required:
+      - purchaseId
+      - paymentOptionId
+      properties:
+        purchaseId:
+          type: string
+        paymentOptionId:
+          type: string
+        bankAccount:
+          $ref: '#/components/schemas/Account'
+    PurchaseInitialization:
+      type: object
+      required:
+      - purchaseAmount
+      properties:
+        purchaseAmount:
+          $ref: '#/components/schemas/Amount'
+        consumer:
+          $ref: '#/components/schemas/Consumer'
+        merchantReference:
+          $ref: '#/components/schemas/MerchantReference'
+        additionalInformation:
+          description: Additional information provided as a key value map
+          type: object
+          additionalProperties:
+            type: string
+    PaymentOptionsRequest:
+      type: object
+      description: Initiates a purchase
+      required:
+      - purchaseId
+      properties:
+        purchaseId:
+          description: A unique identifier for a purchase
+          type: string
+        merchantReference:
+          $ref: '#/components/schemas/MerchantReference'
+        consumer:
+          $ref: '#/components/schemas/Consumer'
+        ip:
+          description: The ip from which the checkout was performed
+          type: string
+        additionalInformation:
+          description: Additional information provided as a key value map
+          type: object
+          additionalProperties:
+            type: string
+    Country:
+      type: string
+      enum:
+      - AT
+      - DE
+      - CH
+      - NL
+      - GB
+      - CA
+      - US
+    Language:
+      type: string
+      enum:
+      - DE
+      - EN
+      - FR
+      - IT
+      - NL
+    Currency:
+      type: string
+      enum:
+      - EUR
+      - CHF
+      - USD
+      - CAD
+      - GBP
+    ProductType:
+      type: string
+      enum:
+      - INVOICE
+      - INSTALLMENT
+      - MONTHLY_INVOICE
+    PaymentMethod:
+      type: string
+      enum:
+      - DIRECT_DEBIT
+      - BANK_TRANSFER
+    OperationStatus:
+      type: string
+      enum:
+      - OK
+      - NOK
+      - ERROR
+      - PENDING
+      - UNKNOWN
+    DocumentType:
+      type: string
+      enum:
+      - HTML
+      - PDF
+    EmailType:
+      type: string
+      enum:
+        - PROMISSORY_NOTE
+        - SECCI
+        - DECLINE
+    StatusCode:
+      type: string
+      description: |
+        Code:
+         * `0.0.0` - "Operation performed sucessfully"
+         * `0.0.1` - "Duplicate request: Operation already performed sucessfully"
+         * `1.0.0` - "Operation performed sucessfully. Final result pending"
+         * `2.0.0` - "Operation permanently declined"
+         * `2.1.0` - "Operation declined (retryable)"
+         * `2.1.1` - "Customer has exceeded limit"
+         * `3.0.0` - "Missing field"
+         * `3.1.0` - "Invalid input data"
+         * `4.0.0` - "Incorrect workflow state"
+         * `4.1.0` - "Wrong purchase state"
+         * `4.2.0` - "Unknown reference"
+         * `4.3.0` - "Invalid product"
+         * `4.4.0` - "Duplicate request"
+         * `4.5.0` - "User not authorized"
+         * `4.5.1` - "User not authorized. Product inactive"
+         * `5.0.0` - "Internal error"
+         * `5.1.0` - "Processing service unavailable (retryable)"
+         * `6.0.0` - "Internal error: Operation result undefined"
+    OperationResult:
+      type: object
+      description: Describes the result of an operation performed on a purchase
+      properties:
+        operationId:
+          type: string
+          description: Unique identifier of the operation performed
+        status:
+          $ref: '#/components/schemas/OperationStatus'
+        statusCode:
+          $ref: '#/components/schemas/StatusCode'
+        statusMessage:
+          type: string
+          description: >-
+            A human readable description giving additional information about the
+            result status
+        processingStart:
+          type: string
+          format: date-time
+          description: Timestamp when operation processing has started
+        processingEnd:
+          type: string
+          format: date-time
+          description: Timestamp when operation processing has finished
+    Consumer:
+      type: object
+      description: Represents a consumer
+      properties:
+        person:
+          $ref: '#/components/schemas/Person'
+        company:
+          $ref: '#/components/schemas/Company'
+        bankAccount:
+          $ref: '#/components/schemas/Account'
+        billingAddress:
+          $ref: '#/components/schemas/Address'
+        deliveryAddress:
+          $ref: '#/components/schemas/DeliveryAddress'
+        deliveryType:
+          $ref: '#/components/schemas/DeliveryType'
+        language:
+          $ref: '#/components/schemas/Language'
+        phone:
+          type: string
+          pattern: "^[+]?[0-9]*$"
+        email:
+          type: string
+          format: email
+    ConsumerVerification:
+      type: object
+      description: Consumer verification possibilities
+      properties:
+        initializeUrl:
+          type: string
+          format: url
+        verifyUrl:
+          type: string
+          format: url
+        consumerDataAvailable:
+          type: boolean
+          description: flag to state that consumer data are available
+          x-jsinterop-ignore: true
+    Person:
+      description: Properties of a natural person
+      type: object
+      properties:
+        salutation:
+          type: string
+          pattern: "^[\\p{IsLatin}. ]*$"
+        firstName:
+          type: string
+          pattern: "^[\\p{IsLatin} ]*$"
+        lastName:
+          type: string
+          pattern: "^[\\p{IsLatin}-' ]*$"
+        birthdate:
+          type: string
+          format: date
+        socialId:
+          type: string
+          pattern: "^[0-9*-]{0,11}$"
+        occupation:
+          $ref: '#/components/schemas/Occupation'
+    Occupation:
+      description: Occupation of a person
+      type: object
+      properties:
+        name:
+          type: string
+        yearlyGrossSalary:
+          type: string
+          pattern: "^[0-9*]{1,6}$"
+        employersName:
+          type: string
+        employersAddress:
+          $ref: '#/components/schemas/Address'
+    Company:
+      description: Representation of a company
+      type: object
+      properties:
+        firstName:
+          type: string
+          pattern: "^[\\p{IsLatin} ]*$"
+        lastName:
+          type: string
+          pattern: "^[\\p{IsLatin}-' ]*$"
+        companyName:
+          type: string
+    Address:
+      description: Represents a postal address of a consumer
+      type: object
+      properties:
+        street:
+          type: string
+          pattern: "^[\\p{IsLatin}-'#/0-9 ]*$"
+        houseNumber:
+          type: string
+          pattern: "^[0-9\\p{IsLatin}/ ]*$"
+        additionalInfo:
+          type: string
+        zipCode:
+          type: string
+          pattern: "^[0-9\\p{IsLatin}- ]*$"
+        city:
+          type: string
+          pattern: "^[\\p{IsLatin}-. ]*$"
+        countryCode:
+          $ref: '#/components/schemas/Country'
+        state:
+          type: string
+    Account:
+      description: >-
+        Represents a bank account of a consumer. Contains holder information and
+        differnt types of routing information.
+      type: object
+      properties:
+        holder:
+          type: string
+          pattern: "^[\\p{IsLatin}-' ]*$"
+        country:
+          $ref: '#/components/schemas/Country'
+        sepa:
+          $ref: '#/components/schemas/Sepa'
+        eft:
+          $ref: '#/components/schemas/Eft'
+        ach:
+          $ref: '#/components/schemas/Ach'
+        bacs:
+          $ref: '#/components/schemas/Bacs'
+    Sepa:
+      type: object
+      properties:
+        iban:
+          type: string
+          pattern: "^[\\p{IsLatin}0-9 ]*$"
+        bic:
+          type: string
+    Ach:
+      type: object
+      properties:
+        accountNumber:
+          type: string
+        accountType:
+          $ref: '#/components/schemas/AchAccountType'
+        routingNumber:
+          type: string
+    Eft:
+      type: object
+      properties:
+        accountNumber:
+          type: string
+        transitNumber:
+          type: string
+        institutionId:
+          type: string
+    Bacs:
+      type: object
+      properties:
+        accountNumber:
+          type: string
+        sortCode:
+          type: string
+    DeliveryAddress:
+      description: Address where goods can be delivered to
+      type: object
+      properties:
+        firstName:
+          type: string
+          pattern: "^[\\p{IsLatin} ]*$"
+        lastName:
+          type: string
+          pattern: "^[\\p{IsLatin}-' ]*$"
+        companyName:
+          type: string
+        address:
+          $ref: '#/components/schemas/Address'
+    PurchaseState:
+      type: string
+      enum:
+      - INITIALIZED
+      - PRECHECKED
+      - DECLINED
+      - AUTHORIZED
+      - AUTHORIZATION_PENDING
+      - CANCELLED
+      - FULFILLMENT
+      - BLOCKED
+      - TIMED_OUT
+      - CLOSED
+    PurchaseInformation:
+      description: Describes the current state of a purchase
+      type: object
+      properties:
+        purchaseId:
+          type: string
+        state:
+          $ref: '#/components/schemas/PurchaseState'
+        currency:
+          $ref: '#/components/schemas/Currency'
+        authorizedAmount:
+          $ref: '#/components/schemas/Amount'
+        capturedAmount:
+          $ref: '#/components/schemas/Amount'
+        remainingCaptureAmount:
+          $ref: '#/components/schemas/Amount'
+        refundedAmount:
+          $ref: '#/components/schemas/Amount'
+        remainingRefundableAmount:
+          $ref: '#/components/schemas/Amount'
+        purchaseAmount:
+          $ref: '#/components/schemas/Amount'
+        consumer:
+          $ref: '#/components/schemas/Consumer'
+        consumerVerification:
+          $ref: '#/components/schemas/ConsumerVerification'
+        merchantReference:
+          $ref: '#/components/schemas/MerchantReference'
+        paymentInformation:
+          $ref: '#/components/schemas/PaymentInformation'
+        paymentOptions:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentOption'
+        captures:
+          description: Performed captures
+          type: array
+          items:
+            $ref: '#/components/schemas/OperationInformation'
+        refunds:
+          description: Performed refunds
+          type: array
+          items:
+            $ref: '#/components/schemas/OperationInformation'
+        documents:
+          description: Static documents
+          type: array
+          items:
+            $ref: '#/components/schemas/Document'
+        metaData:
+          description: Additional information provided as a key value map
+          type: object
+          additionalProperties:
+            type: string
+    MerchantReference:
+      type: object
+      properties:
+        orderId:
+          type: string
+        customerId:
+          type: string
+        invoiceId:
+          type: string
+    ShoppingBasket:
+      type: object
+      properties:
+        basketItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/ShoppingBasketItem'
+    ShoppingBasketItem:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        ian:
+          type: string
+        price:
+          type: integer
+          format: int64
+        type:
+          $ref: '#/components/schemas/ShoppingBasketItemType'
+        risk:
+          $ref: '#/components/schemas/ShoppingBasketItemRisk'
+        fulfillmentStart:
+          type: string
+          format: date
+        fulfillmentEnd:
+          type: string
+          format: date
+        quantity:
+          type: integer
+    ShoppingBasketItemType:
+      type: string
+      enum:
+      - DIGITAL
+      - PHYSICAL
+      - VOUCHER
+      - TRAVEL
+      - TICKET
+    ShoppingBasketItemRisk:
+      type: string
+      enum:
+      - HIGH
+      - MEDIUM
+      - LOW
+    PaymentInformation:
+      type: object
+      properties:
+        paymentReference:
+          type: string
+        account:
+          $ref: '#/components/schemas/Account'
+        paymentMethod:
+          $ref: '#/components/schemas/PaymentMethod'
+        confirmedPaymentOption:
+          $ref: '#/components/schemas/PaymentOption'
+    DeliveryType:
+      type: string
+      enum:
+      - BILLING_ADDRESS
+      - ALTERNATIVE_DELIVERY_ADDRESS
+      - SHOP_PICKUP
+      - POST_OFFICE_PICKUP
+    PurchaseOperationResponse:
+      type: object
+      properties:
+        result:
+          $ref: '#/components/schemas/OperationResult'
+        purchase:
+          $ref: '#/components/schemas/PurchaseInformation'
+    OperationInformation:
+      type: object
+      properties:
+        operationId:
+          type: string
+        status:
+          $ref: '#/components/schemas/OperationStatus'
+        processingDate:
+          type: string
+          format: date-time
+        operationAmount:
+          $ref: '#/components/schemas/Amount'
+    PaymentOption:
+      type: object
+      properties:
+        optionId:
+          type: string
+        consumerCountry:
+          $ref: '#/components/schemas/Country'
+        currency:
+          $ref: '#/components/schemas/Currency'
+        productType:
+          $ref: '#/components/schemas/ProductType'
+        supportedPaymentMethods:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentMethod'
+        totalAmount:
+          $ref: '#/components/schemas/Amount'
+        purchaseAmount:
+          $ref: '#/components/schemas/Amount'
+        interestRate:
+          type: number
+          format: double
+        effectiveInterestRate:
+          type: number
+          format: double
+        numberOfPayments:
+          type: number
+          format: int32
+        payments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Payment'
+        contracts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Contract'
+    Payment:
+      type: object
+      properties:
+        dueDate:
+          type: string
+          format: date
+        paymentAmount:
+          $ref: '#/components/schemas/Amount'
+    Amount:
+      type: object
+      required:
+      - amount
+      - currency
+      properties:
+        amount:
+          type: integer
+          format: int64
+        currency:
+          $ref: '#/components/schemas/Currency'
+    Contract:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          $ref: '#/components/schemas/DocumentType'
+        id:
+          type: string
+        url:
+          type: string
+    Document:
+      type: object
+      properties:
+        name:
+          type: string
+        url:
+          type: string
+    JumioIdentificationRequest:
+      type: object
+      required:
+      - purchaseId
+      properties:
+        purchaseId:
+          type: string
+          description: purchaseId to initialize verify process
+        successUrl:
+          type: string
+          pattern: '^(https:\/\/)[^\?:]*'
+          description: to direct the user after images are accepted for processing
+        errorUrl:
+          type: string
+          pattern: '^(https:\/\/)[^\?:]*'
+          description: >-
+            to direct the user when the verification process ends with an error
+            or a failure after 3 submission attempts
+    AchAccountType:
+      type: string
+      enum:
+      - SAVINGS
+      - CHECKING
+    PurchaseAuthorizationRequest:
+      type: object
+      required:
+      - purchaseId
+      properties:
+        purchaseId:
+          type: string
+          description: purchaseId to initialize verify process
+        phone:
+          type: string
+          pattern: "^[+]?[0-9]*$"
+          description: phone number to start verify process
+        method:
+          $ref: '#/components/schemas/MethodType'
+        hostApplicationUrl:
+          type: string
+          description: Url to redirect to UI application after successful authorization
+        successUrl:
+          type: string
+          description: redirect URL for the merchant after finishing flow
+        callbackUrl:
+          type: string
+          description: After successfully finishing flow, we call callback to indicate finish to merchant
+    CaptureRequest:
+      type: object
+      required:
+      - fulfillmentAmount
+      properties:
+        purchaseId:
+          type: string
+          description: purchaseId
+        orderId:
+          type: string
+          description: orderId
+        fulfillmentAmount:
+          $ref: '#/components/schemas/Amount'
+        closePurchase:
+          type: boolean
+          description: flag to indicate if purchase needs to be closed
+          x-jsinterop-ignore: true
+        deliveryInformation:
+          $ref: '#/components/schemas/DeliveryInformation'
+    DeliveryInformation:
+      type: object
+      properties:
+        expectedShippingDate:
+          type: string
+          format: date
+        logisticsProvider:
+          $ref: '#/components/schemas/LogisticsProvider'
+        trackingNumber:
+          type: string
+          description: trackingNumber of logistics provider
+    LogisticsProvider:
+      type: string
+      enum:
+      - DHL
+      - POST
+      - DPD
+      - GLS
+    RefundRequest:
+      type: object
+      required:
+      - purchaseId
+      - refundAmount
+      properties:
+        purchaseId:
+          type: string
+          description: purchaseId
+        refundAmount:
+          $ref: '#/components/schemas/Amount'
+        reason:
+          $ref: '#/components/schemas/RefundReason'
+    RefundReason:
+      type: string
+      enum:
+      - CUSTOMER_REFUND
+      - MERCHANT_TECHNICAL_PROBLEM
+      - REFUND_OBLIGINGNESS
+      - MERCHANT_CAN_NOT_DELIVER_GOODS
+      default: CUSTOMER_REFUND
+    NotifyRequest:
+      type: object
+      required:
+        - purchaseId
+        - emailType
+      properties:
+        purchaseId:
+          type: string
+          description: purchaseId
+        emailType:
+          $ref: '#/components/schemas/EmailType'
+    FulfillRequest:
+      type: object
+      required:
+      - purchaseId
+      - amount
+      properties:
+        purchaseId:
+          type: string
+          description: purchaseId
+        amount:
+          $ref: '#/components/schemas/Amount'
+        deliveryInformation:
+          $ref: '#/components/schemas/DeliveryInformation'
+        refundReason:
+          $ref: '#/components/schemas/RefundReason'
+    MethodType:
+      type: string
+      enum:
+        - SMS
+        - EMAIL
+        - URL
+        - WHATS_APP
+    CreditAgreementDocument:
+      type: object
+      properties:
+        orderNumber:
+          type: string
+        customerFirstName:
+          type: string
+        customerLastName:
+          type: string
+        orderDate:
+          type: string
+          format: date
+        documentRelativeEndpoint:
+          type: string
