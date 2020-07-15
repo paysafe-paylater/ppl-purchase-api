@@ -6,13 +6,15 @@ info:
 
     **Authorization**
 
-    Authorize for the initialize request using a 'paysafe-pl-secret-key' header (get this key from your account manager).
-    Grab the the session authorization token from the response header 'access_token'.
-    Authorize for the subsequent request can be done with both the Bearer authorization header with the access_token, from the initialize request, or the 'paysafe-pl-secret-key' header. The access_token can be used for further client side invocations The 'paysafe-pl-secret-key' is only for server side invocations.
+    Authorize for the initialize request using a 'paysafe-pl-secret-key' header (you can get this key from your account manager).
+    Grab the session authorization token from the response header 'access_token'.
+    Authorization of the subsequent request can be done with either the Bearer authorization header, with the access_token from the initialize request, or the 'paysafe-pl-secret-key' header.
+    The access_token can then be used for further client-side invocations. The 'paysafe-pl-secret-key' is only intended for server-side invocations.
 
     **Secret key**
 
-    Multiple 'paysafe-pl-secret-key' can be requested and each keys has either the Installment or Invoice product configured. There will always be one default key that can also be used to decrypt the incoming webhooks.
+    Multiple 'paysafe-pl-secret-key's can be requested. Each key is linked to either the Installment or Invoice product.
+    There will always be one default key. That one can be used to decrypt incoming webhooks.
   version: 1.0.0
   license:
     name: MIT
@@ -21,78 +23,32 @@ info:
     email: integration.paylater@paysafe.com
 tags:
   - name: PurchaseLifecycle
-    description: handles all necessary steps for a purchase
+    description: 'Handles all necessary steps for a purchase.'
   - name: PurchaseAuthorization
-    description: authorizes a consumer to perform operations on an initialized purchase through a web client
+    description: 'Authorizes a consumer to perform operations on an initialized purchase through a web client.'
   - name: LegalDocuments
-    description: all documents necessary that need to be approved during PurchaseLifecycle
+    description: 'Provides all documents required for approval during PurchaseLifecycle.'
 x-restygwt-servicerootkey: purchaseapi
 paths:
   /purchase/initialize:
     post:
+      operationId: initializePurchase
       tags:
         - PurchaseLifecycle
-      summary: Initializes a purchase for a given amount and returns a response with all pre-configured payment options
-      description: |
-        Initializes a purchase for a given amount and returns a response with all
-        pre-configured (non-binding) payment options.
-      operationId: initializePurchase
-      responses:
-        '200':
-          description: |
-            PurchaseLifecycle endpoints always return the same object with different state of the purchase and different fields populated.
-
-            The initialize operation returns a single-purchase token in the response header <<authorization_token>>. This token has to be used by callers that initialized the purchase with client authorization scope.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PurchaseOperationResponse'
-          headers:
-            access_token:
-              schema:
-                type: string
-              description: Access token which can be used to authorize for subsequent request
-              required: true
-        '400':
-          description: |
-            PurchaseLifecycle endpoints also returns the same object when an error occurs. The purchase object however will be null.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PurchaseOperationResponse'
-        '401':
-          description: |
-            PurchaseLifecycle endpoints also returns the same object when an error occurs. The purchase object however will be null.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PurchaseOperationResponse'
-        '403':
-          description: |
-            PurchaseLifecycle endpoints also returns the same object when an error occurs. The purchase object however will be null.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PurchaseOperationResponse'
-        '404':
-          description: |
-            PurchaseLifecycle endpoints also returns the same object when an error occurs. The purchase object however will be null.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PurchaseOperationResponse'
-        '500':
-          description: |
-            PurchaseLifecycle endpoints also returns the same object when an error occurs. The purchase object however will be null.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PurchaseOperationResponse'
+      summary: 'Initialize a purchase for a given amount and returns a response with all pre-configured payment options.'
+      description: 'Initializes a purchase for a given amount and returns a response with all pre-configured (non-binding) payment options.'
+      parameters:
+        - name: paysafe-pl-secret-key
+          description: 'Secret key which can be requested from your account manager. Only use this for server-to-server communication.'
+          required: true
+          in: header
+          schema:
+            type: string
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PurchaseInitializationRequest'
+              $ref: '#/components/schemas/InitializePurchaseRequest'
             examples:
               Initialize:
                 value:
@@ -140,69 +96,78 @@ paths:
                     PAYOLUTION_ITEM_TAX_2: '50.00'
                     PAYOLUTION_FULFILLMENT_START: '2020-06-12'
                     PAYOLUTION_FULFILLMENT_END: '2020-06-12'
-        description: Request object with data needed to initialize a purchase
+        description: 'Contains the data needed to initialize a purchase.'
         required: true
-      parameters:
-        - schema:
-            type: string
-          in: header
-          name: paysafe-pl-secret-key
-          description: This header should contain the secret key which can be requested from your account manager.
-          required: true
-  /purchase/capture:
-    post:
-      tags:
-        - PurchaseLifecycle
-      summary: Merchant confirms a capture(=shipping) of the purchased goods
-      description: Merchant confirms a capture(=shipping) of the purchased goods.
-      operationId: capture
       responses:
         '200':
-          description: PurchaseLifecycle endpoints return always the same object with different state of the purchase and different fields populated.
+          description: |
+            PurchaseLifecycle endpoints always return the same object with the latest state of the purchase and different fields populated.
+
+            In addition, the initialize operation returns a single-purchase authentication token in the response header <<access_token>>. This token has to be used by client-side callers.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PurchaseOperationResponse'
+          headers:
+            access_token:
+              schema:
+                type: string
+              description: 'Access token which can be used to authorize subsequent requests.'
+              required: true
         '400':
           description: |
-            PurchaseLifecycle endpoints also returns the same object when an error occurs. The purchase object however will be null.
+            PurchaseLifecycle endpoints also return the same object when an error occurs. The purchase object however will be null.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PurchaseOperationResponse'
         '401':
           description: |
-            PurchaseLifecycle endpoints also returns the same object when an error occurs. The purchase object however will be null.
+            PurchaseLifecycle endpoints also return the same object when an error occurs. The purchase object however will be null.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PurchaseOperationResponse'
         '403':
           description: |
-            PurchaseLifecycle endpoints also returns the same object when an error occurs. The purchase object however will be null.
+            PurchaseLifecycle endpoints also return the same object when an error occurs. The purchase object however will be null.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PurchaseOperationResponse'
         '404':
           description: |
-            PurchaseLifecycle endpoints also returns the same object when an error occurs. The purchase object however will be null.
+            PurchaseLifecycle endpoints also return the same object when an error occurs. The purchase object however will be null.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PurchaseOperationResponse'
         '500':
           description: |
-            PurchaseLifecycle endpoints also returns the same object when an error occurs. The purchase object however will be null.
+            PurchaseLifecycle endpoints also return the same object when an error occurs. The purchase object however will be null.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PurchaseOperationResponse'
+  /purchase/capture:
+    post:
+      operationId: capturePurchase
+      tags:
+        - PurchaseLifecycle
+      summary: 'Confirm a capture(=shipping) of the purchased goods.'
+      description: 'Confirm a capture(=shipping) of the purchased goods.'
+      parameters:
+        - name: paysafe-pl-secret-key
+          description: 'Secret key which can be requested from your account manager. Only use this for server-to-server communication.'
+          required: true
+          in: header
+          schema:
+            type: string
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CaptureRequest'
+              $ref: '#/components/schemas/CapturePurchaseRequest'
             examples:
               'Capture | purchaseId':
                 value:
@@ -216,69 +181,71 @@ paths:
                   fulfillmentAmount:
                     amount: 50000
                     currency: EUR
-        description: All data needed to process a capture(=shipping) of purchased goods
+        description: 'Contains all data needed to process a capture(=shipping) of purchased goods.'
         required: true
-      parameters:
-        - schema:
-            type: string
-          in: header
-          name: paysafe-pl-secret-key
-          description: This header should contain the secret key which can be requested from your account manager.
-          required: true
-  /purchase/refund:
-    post:
-      tags:
-        - PurchaseLifecycle
-      summary: Merchant refunds part of or full purchase in case consumer returned purchased goods
-      description: Merchant refunds part of or full purchase in case consumer returned purchased goods.
-      operationId: refund
       responses:
         '200':
-          description: PurchaseLifecycle endpoints return always the same object with different state of the purchase and different fields populated.
+          description: 'PurchaseLifecycle endpoints always return the same object with the latest state of the purchase and different fields populated.'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PurchaseOperationResponse'
         '400':
           description: |
-            PurchaseLifecycle endpoints also returns the same object when an error occurs. The purchase object however will be null.
+            PurchaseLifecycle endpoints also return the same object when an error occurs. The purchase object however will be null.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PurchaseOperationResponse'
         '401':
           description: |
-            PurchaseLifecycle endpoints also returns the same object when an error occurs. The purchase object however will be null.
+            PurchaseLifecycle endpoints also return the same object when an error occurs. The purchase object however will be null.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PurchaseOperationResponse'
         '403':
           description: |
-            PurchaseLifecycle endpoints also returns the same object when an error occurs. The purchase object however will be null.
+            PurchaseLifecycle endpoints also return the same object when an error occurs. The purchase object however will be null.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PurchaseOperationResponse'
         '404':
           description: |
-            PurchaseLifecycle endpoints also returns the same object when an error occurs. The purchase object however will be null.
+            PurchaseLifecycle endpoints also return the same object when an error occurs. The purchase object however will be null.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PurchaseOperationResponse'
         '500':
           description: |
-            PurchaseLifecycle endpoints also returns the same object when an error occurs. The purchase object however will be null.
+            PurchaseLifecycle endpoints also return the same object when an error occurs. The purchase object however will be null.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PurchaseOperationResponse'
+  /purchase/refund:
+    post:
+      operationId: refundPurchase
+      tags:
+        - PurchaseLifecycle
+      summary: 'Refund part of or the full purchase amount in case consumer returned purchased goods.'
+      description: 'Refund part of or the full purchase amount in case consumer returned purchased goods.'
+      parameters:
+        - name: paysafe-pl-secret-key
+          description: 'Secret key which can be requested from your account manager. Only use this for server-to-server communication.'
+          required: true
+          in: header
+          schema:
+            type: string
       requestBody:
+        description: 'All data needed to process a refund of a purchase.'
+        required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/RefundRequest'
+              $ref: '#/components/schemas/RefundPurchaseRequest'
             examples:
               Refund:
                 value:
@@ -286,71 +253,143 @@ paths:
                   refundAmount:
                     amount: 40000
                     currency: EUR
-        description: All data needed to process a refund of a purchase
-        required: true
-      parameters:
-        - schema:
-            type: string
-          in: header
-          name: paysafe-pl-secret-key
-          description: This header should contain the secret key which can be requested from your account manager.
-          required: true
-  /purchase/authorize/paylater:
-    post:
-      tags:
-        - PurchaseAuthorization
-      summary: Authorize a consumer to complete a transaction with our hosted solution
-      description: |
-        Authorize a consumer to complete a transaction with our hosted solution. Option to start via SMS or URL.
-      operationId: authorizePaylater
       responses:
         '200':
-          description: |
-            PurchaseAuthorization endpoints always return the same object with different state of the purchase and different fields populated.
+          description: 'PurchaseLifecycle endpoints always return the same object with the latest state of the purchase and different fields populated.'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PurchaseOperationResponse'
         '400':
           description: |
-            PurchaseLifecycle endpoints also returns the same object when an error occurs. The purchase object however will be null.
+            PurchaseLifecycle endpoints also return the same object when an error occurs. The purchase object however will be null.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PurchaseOperationResponse'
         '401':
           description: |
-            PurchaseLifecycle endpoints also returns the same object when an error occurs. The purchase object however will be null.
+            PurchaseLifecycle endpoints also return the same object when an error occurs. The purchase object however will be null.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PurchaseOperationResponse'
         '403':
           description: |
-            PurchaseLifecycle endpoints also returns the same object when an error occurs. The purchase object however will be null.
+            PurchaseLifecycle endpoints also return the same object when an error occurs. The purchase object however will be null.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PurchaseOperationResponse'
         '404':
           description: |
-            PurchaseLifecycle endpoints also returns the same object when an error occurs. The purchase object however will be null.
+            PurchaseLifecycle endpoints also return the same object when an error occurs. The purchase object however will be null.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PurchaseOperationResponse'
         '500':
           description: |
-            PurchaseLifecycle endpoints also returns the same object when an error occurs. The purchase object however will be null.
+            PurchaseLifecycle endpoints also return the same object when an error occurs. The purchase object however will be null.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PurchaseOperationResponse'
+  '/purchase/info/{purchaseId}':
+    get:
+      operationId: getPurchase
+      tags:
+        - PurchaseLifecycle
+      summary: 'Query for a purchase by purchaseId.'
+      description: 'Query for a purchase for a given purchaseId.'
+      parameters:
+        - name: Authorization
+          description: 'The access token received from the initialize request. Provide this for client-side requests in the Bearer format.'
+          in: header
+          schema:
+            type: string
+            example: Bearer $access_token
+        - name: paysafe-pl-secret-key
+          description: 'Secret key which can be requested from your account manager. Only use this for server-to-server communication.'
+          required: true
+          in: header
+          schema:
+            type: string
+        - name: purchaseId
+          description: 'PurchaseId received from initializePurchase or authorizePurchase response.'
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 'PurchaseLifecycle endpoints always return the same object with the latest state of the purchase and different fields populated.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOperationResponse'
+        '400':
+          description: |
+            PurchaseLifecycle endpoints also return the same object when an error occurs. The purchase object however will be null.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOperationResponse'
+        '401':
+          description: |
+            PurchaseLifecycle endpoints also return the same object when an error occurs. The purchase object however will be null.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOperationResponse'
+        '403':
+          description: |
+            PurchaseLifecycle endpoints also return the same object when an error occurs. The purchase object however will be null.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOperationResponse'
+        '404':
+          description: |
+            PurchaseLifecycle endpoints also return the same object when an error occurs. The purchase object however will be null.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOperationResponse'
+        '500':
+          description: |
+            PurchaseLifecycle endpoints also return the same object when an error occurs. The purchase object however will be null.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOperationResponse'
+  /purchase/authorize/paylater:
+    post:
+      operationId: authorizePayLater
+      tags:
+        - PurchaseAuthorization
+      summary: 'Authorize a consumer to complete a transaction with our hosted solution.'
+      description: |
+        Authorize a consumer to complete a transaction with our hosted solution. Can be started via SMS or URL.
+      parameters:
+        - name: Authorization
+          description: 'The access token received from the initialize request. Provide this for client-side requests in the Bearer format.'
+          in: header
+          schema:
+            type: string
+            example: Bearer $access_token
+        - name: paysafe-pl-secret-key
+          description: 'Secret key which can be requested from your account manager. Provide this for server-to-server communication.'
+          in: header
+          schema:
+            type: string
       requestBody:
+        description: 'Contains everything needed to start the Authorization Process.'
+        required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PurchaseAuthorizationRequest'
+              $ref: '#/components/schemas/AuthorizePurchaseRequest'
             examples:
               'Authorize | SMS':
                 value:
@@ -365,234 +404,237 @@ paths:
                   method: URL
                   successUrl: 'https://example.com/successUrl'
                   callbackUrl: 'https://example.com/callbackUrl'
-        description: Everything needed to start the Authorization Process
-        required: true
-      parameters:
-        - schema:
-            type: string
-            example: Bearer $access_token
-          in: header
-          name: Authorization
-          description: Access token received from the initialize request.
-        - schema:
-            type: string
-          in: header
-          name: paysafe-pl-secret-key
-          description: This header should contain the secret key which can be requested from your account manager. (provide this if access_token is not available)
-  '/purchase/legaldocuments/termsandconditions/{purchaseId}':
-    get:
-      tags:
-        - LegalDocuments
-      description: Generates a termsandconditions html.
-      operationId: termsandconditions
-      summary: Generates a termsandconditions document in html format
-      parameters:
-        - name: purchaseId
-          description: purchaseId received from initialize request to start the verify process
-          in: path
-          required: true
-          schema:
-            type: string
-        - schema:
-            type: string
-          in: header
-          name: Authorization
-          description: Access token received from the initialize request.
-        - schema:
-            type: string
-          in: header
-          name: paysafe-pl-secret-key
-          description: This header should contain the secret key which can be requested from your account manager. (provide this if access_token is not available)
       responses:
         '200':
-          description: Response of the Terms and conditions in HTML format.
-          content:
-            text/html:
-              schema:
-                type: string
-  '/purchase/info/{purchaseId}':
-    get:
-      tags:
-        - PurchaseLifecycle
-      summary: Queries for a purchase by purchaseId
-      description: |
-        Queries for a purchase for a given purchaseId
-      operationId: getPurchase
-      parameters:
-        - schema:
-            type: string
-          in: header
-          name: Authorization
-          description: Access token received from the initialize request.
-        - schema:
-            type: string
-          in: header
-          name: paysafe-pl-secret-key
-          description: This header should contain the secret key which can be requested from your account manager. (provide this if access_token is not available)
-      responses:
-        '200':
-          description: PurchaseLifecycle endpoints return always the same object with different state of the purchase and different fields populated.
+          description: |
+            PurchaseAuthorization endpoints always return the same object with different state of the purchase and different fields populated.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PurchaseOperationResponse'
         '400':
           description: |
-            PurchaseLifecycle endpoints also returns the same object when an error occurs. The purchase object however will be null.
+            PurchaseLifecycle endpoints also return the same object when an error occurs. The purchase object however will be null.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PurchaseOperationResponse'
         '401':
           description: |
-            PurchaseLifecycle endpoints also returns the same object when an error occurs. The purchase object however will be null.
+            PurchaseLifecycle endpoints also return the same object when an error occurs. The purchase object however will be null.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PurchaseOperationResponse'
         '403':
           description: |
-            PurchaseLifecycle endpoints also returns the same object when an error occurs. The purchase object however will be null.
+            PurchaseLifecycle endpoints also return the same object when an error occurs. The purchase object however will be null.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PurchaseOperationResponse'
         '404':
           description: |
-            PurchaseLifecycle endpoints also returns the same object when an error occurs. The purchase object however will be null.
+            PurchaseLifecycle endpoints also return the same object when an error occurs. The purchase object however will be null.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PurchaseOperationResponse'
         '500':
           description: |
-            PurchaseLifecycle endpoints also returns the same object when an error occurs. The purchase object however will be null.
+            PurchaseLifecycle endpoints also return the same object when an error occurs. The purchase object however will be null.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/PurchaseOperationResponse'
-    parameters:
-      - schema:
-          type: string
-        name: purchaseId
-        in: path
-        required: true
-        description: purchaseId received from initialize or authorize response
+  '/purchase/legaldocuments/termsandconditions/{purchaseId}':
+    get:
+      operationId: getTermsAndConditions
+      tags:
+        - LegalDocuments
+      summary: 'Generates a html document with the terms and conditions that apply to the purchase.'
+      description: 'Generates a terms-and-conditions document in html format.'
+      parameters:
+        - name: purchaseId
+          description: 'The purchaseId received from the initialize request that started the verification process.'
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: Authorization
+          description: 'The access token received from the initialize request. Provide this for client-side requests in the Bearer format.'
+          in: header
+          schema:
+            type: string
+            example: Bearer $access_token
+        - name: paysafe-pl-secret-key
+          description: 'Secret key which can be requested from your account manager. Provide this for server-to-server communication.'
+          in: header
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 'Terms and conditions in HTML format.'
+          content:
+            text/html:
+              schema:
+                type: string
 servers:
   - url: 'https://test-gateway.payolution.com'
-    description: Test
-  - description: Production
-    url: 'https://gateway.payolution.com'
+    description: 'Test.'
+  - url: 'https://gateway.payolution.com'
+    description: 'Production.'
 components:
   schemas:
-    PurchaseInitializationRequest:
+    Account:
+      description: 'Represents a bank account of a consumer. Contains holder information and different types of routing information.'
       type: object
-      description: ''
       properties:
-        purchaseAmount:
-          $ref: '#/components/schemas/Amount'
-        consumer:
-          $ref: '#/components/schemas/Consumer'
-        merchantReference:
-          $ref: '#/components/schemas/MerchantReference'
-        additionalInformation:
-          $ref: '#/components/schemas/AdditionalInformation'
-      required:
-        - purchaseAmount
-    Country:
+        holder:
+          type: string
+          pattern: "^[\\p{IsLatin}\\-' ]*$"
+        country:
+          $ref: '#/components/schemas/Country'
+        sepa:
+          $ref: '#/components/schemas/Sepa'
+        eft:
+          $ref: '#/components/schemas/Eft'
+        ach:
+          $ref: '#/components/schemas/Ach'
+        bacs:
+          $ref: '#/components/schemas/Bacs'
+    Ach:
+      type: object
+      properties:
+        accountNumber:
+          type: string
+        accountType:
+          $ref: '#/components/schemas/AchAccountType'
+        routingNumber:
+          type: string
+    AchAccountType:
       type: string
       enum:
-        - AT
-        - DE
-        - CH
-        - NL
-    Language:
-      type: string
-      enum:
-        - DE
-        - EN
-    Currency:
-      type: string
-      enum:
-        - EUR
-        - CHF
-        - USD
-        - CAD
-        - GBP
-      description: ''
-    ProductType:
-      type: string
-      enum:
-        - INVOICE
-        - INSTALLMENT
-        - MONTHLY_INVOICE
-    PaymentMethod:
-      type: string
-      enum:
-        - DIRECT_DEBIT
-        - BANK_TRANSFER
-    OperationStatus:
-      type: string
-      enum:
-        - OK
-        - NOK
-        - ERROR
-        - PENDING
-        - UNKNOWN
-      description: Status of the operation
-    DocumentType:
-      type: string
-      enum:
-        - HTML
-        - PDF
-    StatusCode:
+        - SAVINGS
+        - CHECKING
+    AdditionalInformation:
       type: string
       description: |-
-        Code:
-         * `0.0.0` - "Operation performed sucessfully"
-         * `0.0.1` - "Duplicate request: Operation already performed sucessfully"
-         * `1.0.0` - "Operation performed sucessfully. Final result pending"
-         * `2.0.0` - "Operation permanently declined"
-         * `2.1.0` - "Operation declined (retryable)"
-         * `2.1.1` - "Customer has exceeded limit"
-         * `3.0.0` - "Missing field"
-         * `3.1.0` - "Invalid input data"
-         * `4.0.0` - "Incorrect workflow state"
-         * `4.1.0` - "Wrong purchase state"
-         * `4.2.0` - "Unknown reference"
-         * `4.3.0` - "Invalid product"
-         * `4.4.0` - "Duplicate request"
-         * `4.5.0` - "User not authorized"
-         * `4.5.1` - "User not authorized. Product inactive"
-         * `5.0.0` - "Internal error"
-         * `5.1.0` - "Processing service unavailable (retryable)"
-         * `6.0.0` - "Internal error: Operation result undefined"
-      title: ''
-    OperationResult:
+        Additional information provided as a key value map.
+
+        Shop information, when a merchant has multiple shops this assigns a specific transaction to a specific shop:
+        - PAYOLUTION_SHOP_ID
+        - PAYOLUTION_SHOP_NAME
+        - PAYOLUTION_SHOP_LEGAL_NAME
+
+        Customer registration, input for risk, increases acceptance rate:
+        - PAYOLUTION_CUSTOMER_REGISTRATION_DATE
+        - PAYOLUTION_CUSTOMER_REGISTRATION_LEVEL
+
+        Basket content, input for risk, increases acceptance rate:
+        - PAYOLUTION_ITEM_DESCR_1
+        - PAYOLUTION_ITEM_PRICE_1
+        - PAYOLUTION_ITEM_TAX_1
+
+        Fulfillment dates, delays due date for customer:
+        - PAYOLUTION_FULFILLMENT_START
+        - PAYOLUTION_FULFILLMENT_END
+    Address:
+      description: 'Represents a postal address of a consumer.'
       type: object
-      description: Describes the result of an operation performed on a purchase
       properties:
-        operationId:
+        street:
           type: string
-          description: Unique identifier of the operation performed
-        status:
-          $ref: '#/components/schemas/OperationStatus'
-        statusCode:
-          $ref: '#/components/schemas/StatusCode'
-        statusMessage:
+          pattern: "^[\\p{IsLatin}\\-'#/0-9 ]*$"
+        houseNumber:
           type: string
-          description: A human readable description giving additional information about the result status
-        processingStart:
+          pattern: "^[0-9\\p{IsLatin}/ ]*$"
+        additionalInfo:
           type: string
-          format: date-time
-          description: Timestamp when operation processing has started
-        processingEnd:
+        zipCode:
           type: string
-          format: date-time
-          description: Timestamp when operation processing has finished
+          pattern: "^[0-9\\p{IsLatin}\\- ]*$"
+        city:
+          type: string
+          pattern: "^[\\p{IsLatin}\\-. ]*$"
+        countryCode:
+          $ref: '#/components/schemas/Country'
+        state:
+          type: string
+    Amount:
+      type: object
+      required:
+        - amount
+        - currency
+      properties:
+        amount:
+          type: integer
+          format: int64
+          description: 'Amount in cents.'
+        currency:
+          $ref: '#/components/schemas/Currency'
+    AuthorizePurchaseRequest:
+      type: object
+      required:
+        - purchaseId
+        - method
+      properties:
+        purchaseId:
+          type: string
+          description: 'PurchaseId received from initializePurchase or authorizePurchase response.'
+        phone:
+          type: string
+          pattern: '^[+]?[0-9]*$'
+          description: "If method 'SMS' is chosen, a phone number must be provided and will receive a message to start the verify process."
+        method:
+          $ref: '#/components/schemas/MethodType'
+        successUrl:
+          type: string
+          description: 'Redirect URL for the merchant after finishing the flow.'
+        callbackUrl:
+          type: string
+          description: 'After successfully finishing the flow, this URL will receive a callback to indicate completion to the merchant.'
+    Bacs:
+      type: object
+      properties:
+        accountNumber:
+          type: string
+        sortCode:
+          type: string
+    CapturePurchaseRequest:
+      type: object
+      required:
+        - fulfillmentAmount
+      properties:
+        purchaseId:
+          type: string
+          description: 'PurchaseId received from initializePurchase or authorizePurchase response.'
+        orderId:
+          type: string
+          description: 'OrderId received after the consumer has completed the transaction from getPurchase response or callback message.'
+        fulfillmentAmount:
+          $ref: '#/components/schemas/Amount'
+        closePurchase:
+          type: boolean
+          description: 'This flag indicates if the purchase can be closed.'
+          x-jsinterop-ignore: true
+        deliveryInformation:
+          $ref: '#/components/schemas/DeliveryInformation'
+    Company:
+      description: 'Representation of a company.'
+      type: object
+      properties:
+        firstName:
+          type: string
+          pattern: "^[\\p{IsLatin} ]*$"
+        lastName:
+          type: string
+          pattern: "^[\\p{IsLatin}\\-' ]*$"
+        companyName:
+          type: string
     Consumer:
       type: object
-      description: Represents a consumer
+      description: 'Represents a consumer.'
       properties:
         person:
           $ref: '#/components/schemas/Person'
@@ -616,7 +658,7 @@ components:
           format: email
     ConsumerVerification:
       type: object
-      description: Consumer verification possibilities
+      description: 'Consumer verification possibilities.'
       properties:
         initializeUrl:
           type: string
@@ -626,131 +668,36 @@ components:
           format: url
         consumerDataAvailable:
           type: boolean
-          description: flag to state that consumer data are available
+          description: 'Flag to state that consumer data are available.'
           x-jsinterop-ignore: true
-    Person:
-      description: Properties of a natural person
-      type: object
-      properties:
-        salutation:
-          type: string
-          pattern: "^[\\p{IsLatin}. ]*$"
-        firstName:
-          type: string
-          pattern: "^[\\p{IsLatin} ]*$"
-        lastName:
-          type: string
-          pattern: "^[\\p{IsLatin}\\-' ]*$"
-        birthdate:
-          type: string
-          format: date
-        socialId:
-          type: string
-          pattern: '^[0-9*-]{0,11}$'
-        occupation:
-          $ref: '#/components/schemas/Occupation'
-    Occupation:
-      description: Occupation of a person
+    Contract:
       type: object
       properties:
         name:
           type: string
-        yearlyGrossSalary:
+        type:
+          $ref: '#/components/schemas/DocumentType'
+        id:
           type: string
-          pattern: '^[0-9*]{1,6}$'
-        employersName:
+        url:
           type: string
-        employersAddress:
-          $ref: '#/components/schemas/Address'
-    Company:
-      description: Representation of a company
-      type: object
-      properties:
-        firstName:
-          type: string
-          pattern: "^[\\p{IsLatin} ]*$"
-        lastName:
-          type: string
-          pattern: "^[\\p{IsLatin}\\-' ]*$"
-        companyName:
-          type: string
-    Address:
-      description: Represents a postal address of a consumer
-      type: object
-      properties:
-        street:
-          type: string
-          pattern: "^[\\p{IsLatin}\\-'#/0-9 ]*$"
-        houseNumber:
-          type: string
-          pattern: "^[0-9\\p{IsLatin}/ ]*$"
-        additionalInfo:
-          type: string
-        zipCode:
-          type: string
-          pattern: "^[0-9\\p{IsLatin}\\- ]*$"
-        city:
-          type: string
-          pattern: "^[\\p{IsLatin}\\-. ]*$"
-        countryCode:
-          $ref: '#/components/schemas/Country'
-        state:
-          type: string
-    Account:
-      description: Represents a bank account of a consumer. Contains holder information and differnt types of routing information.
-      type: object
-      properties:
-        holder:
-          type: string
-          pattern: "^[\\p{IsLatin}\\-' ]*$"
-        country:
-          $ref: '#/components/schemas/Country'
-        sepa:
-          $ref: '#/components/schemas/Sepa'
-        eft:
-          $ref: '#/components/schemas/Eft'
-        ach:
-          $ref: '#/components/schemas/Ach'
-        bacs:
-          $ref: '#/components/schemas/Bacs'
-    Sepa:
-      type: object
-      properties:
-        iban:
-          type: string
-          pattern: "^[\\p{IsLatin}0-9 ]*$"
-        bic:
-          type: string
-    Ach:
-      type: object
-      properties:
-        accountNumber:
-          type: string
-        accountType:
-          $ref: '#/components/schemas/AchAccountType'
-        routingNumber:
-          type: string
-    AdditionalInformation:
+    Country:
       type: string
-      description: "Additional information provided as a key value map. \n\nShop information, when a merchant has multiple shops this assigns a specific transaction to a specific shop:\n\n    - PAYOLUTION_SHOP_ID\n    - PAYOLUTION_SHOP_NAME\n    - PAYOLUTION_SHOP_LEGAL_NAME\n\nCustomer registration, input for risk, increases acceptance rate:\n\n    - PAYOLUTION_CUSTOMER_REGISTRATION_DATE\n    - PAYOLUTION_CUSTOMER_REGISTRATION_LEVEL\n\nBasket content, input for risk, increases acceptance rate:\n\n    - PAYOLUTION_ITEM_DESCR_1\n    - PAYOLUTION_ITEM_PRICE_1\n    - PAYOLUTION_ITEM_TAX_1\n\nFulfillment dates, delays due date for customer:\n\n    - PAYOLUTION_FULFILLMENT_START\n    - PAYOLUTION_FULFILLMENT_END         "
-    Eft:
-      type: object
-      properties:
-        accountNumber:
-          type: string
-        transitNumber:
-          type: string
-        institutionId:
-          type: string
-    Bacs:
-      type: object
-      properties:
-        accountNumber:
-          type: string
-        sortCode:
-          type: string
+      enum:
+        - AT
+        - DE
+        - CH
+        - NL
+    Currency:
+      type: string
+      enum:
+        - EUR
+        - CHF
+        - USD
+        - CAD
+        - GBP
     DeliveryAddress:
-      description: Address where goods can be delivered to
+      description: 'Address where goods can be delivered to.'
       type: object
       properties:
         firstName:
@@ -763,73 +710,70 @@ components:
           type: string
         address:
           $ref: '#/components/schemas/Address'
-    PurchaseState:
-      type: string
-      enum:
-        - INITIALIZED
-        - PRECHECKED
-        - DECLINED
-        - AUTHORIZED
-        - AUTHORIZATION_PENDING
-        - CANCELLED
-        - FULFILLMENT
-        - BLOCKED
-        - TIMED_OUT
-        - CLOSED
-    PurchaseInformation:
-      description: Describes the current state of a purchase
+    DeliveryInformation:
       type: object
       properties:
-        purchaseId:
+        expectedShippingDate:
           type: string
-        state:
-          $ref: '#/components/schemas/PurchaseState'
-        currency:
-          $ref: '#/components/schemas/Currency'
-        authorizedAmount:
-          $ref: '#/components/schemas/Amount'
-        capturedAmount:
-          $ref: '#/components/schemas/Amount'
-        remainingCaptureAmount:
-          $ref: '#/components/schemas/Amount'
-        refundedAmount:
-          $ref: '#/components/schemas/Amount'
-        remainingRefundableAmount:
-          $ref: '#/components/schemas/Amount'
+          format: date
+        logisticsProvider:
+          $ref: '#/components/schemas/LogisticsProvider'
+        trackingNumber:
+          type: string
+          description: 'The tracking number of the logistics provider.'
+    DeliveryType:
+      type: string
+      enum:
+        - BILLING_ADDRESS
+        - ALTERNATIVE_DELIVERY_ADDRESS
+        - SHOP_PICKUP
+        - POST_OFFICE_PICKUP
+    Document:
+      type: object
+      properties:
+        name:
+          type: string
+        url:
+          type: string
+    DocumentType:
+      type: string
+      enum:
+        - HTML
+        - PDF
+    Eft:
+      type: object
+      properties:
+        accountNumber:
+          type: string
+        transitNumber:
+          type: string
+        institutionId:
+          type: string
+    InitializePurchaseRequest:
+      type: object
+      properties:
         purchaseAmount:
           $ref: '#/components/schemas/Amount'
         consumer:
           $ref: '#/components/schemas/Consumer'
-        consumerVerification:
-          $ref: '#/components/schemas/ConsumerVerification'
         merchantReference:
           $ref: '#/components/schemas/MerchantReference'
-        paymentInformation:
-          $ref: '#/components/schemas/PaymentInformation'
-        paymentOptions:
-          type: array
-          items:
-            $ref: '#/components/schemas/PaymentOption'
-        captures:
-          description: Performed captures
-          type: array
-          items:
-            $ref: '#/components/schemas/OperationInformation'
-        refunds:
-          description: Performed refunds
-          type: array
-          items:
-            $ref: '#/components/schemas/OperationInformation'
-        documents:
-          description: Static documents
-          type: array
-          items:
-            $ref: '#/components/schemas/Document'
-        metaData:
-          description: Additional information provided as a key value map
-          type: object
-          additionalProperties:
-            type: string
+        additionalInformation:
+          $ref: '#/components/schemas/AdditionalInformation'
+      required:
+        - purchaseAmount
+    Language:
+      type: string
+      enum:
+        - DE
+        - EN
+    LogisticsProvider:
+      type: string
+      enum:
+        - DHL
+        - POST
+        - DPD
+        - GLS
     MerchantReference:
       type: object
       properties:
@@ -839,32 +783,25 @@ components:
           type: string
         invoiceId:
           type: string
-    PaymentInformation:
-      type: object
-      properties:
-        paymentReference:
-          type: string
-        account:
-          $ref: '#/components/schemas/Account'
-        paymentMethod:
-          $ref: '#/components/schemas/PaymentMethod'
-        confirmedPaymentOption:
-          $ref: '#/components/schemas/PaymentOption'
-    DeliveryType:
+    MethodType:
       type: string
       enum:
-        - BILLING_ADDRESS
-        - ALTERNATIVE_DELIVERY_ADDRESS
-        - SHOP_PICKUP
-        - POST_OFFICE_PICKUP
-    PurchaseOperationResponse:
+        - SMS
+        - URL
+      description: 'Method with which the end user is redirected to the Instore Selfservice application.'
+    Occupation:
+      description: 'Occupation of a person.'
       type: object
       properties:
-        result:
-          $ref: '#/components/schemas/OperationResult'
-        purchase:
-          $ref: '#/components/schemas/PurchaseInformation'
-      title: ''
+        name:
+          type: string
+        yearlyGrossSalary:
+          type: string
+          pattern: '^[0-9*]{1,6}$'
+        employersName:
+          type: string
+        employersAddress:
+          $ref: '#/components/schemas/Address'
     OperationInformation:
       type: object
       properties:
@@ -877,6 +814,61 @@ components:
           format: date-time
         operationAmount:
           $ref: '#/components/schemas/Amount'
+    OperationResult:
+      type: object
+      description: 'Describes the result of an operation performed on a purchase.'
+      properties:
+        operationId:
+          type: string
+          description: 'Unique identifier of the operation performed.'
+        status:
+          $ref: '#/components/schemas/OperationStatus'
+        statusCode:
+          $ref: '#/components/schemas/StatusCode'
+        statusMessage:
+          type: string
+          description: 'A human-readable description giving additional information about the result status.'
+        processingStart:
+          type: string
+          format: date-time
+          description: 'Timestamp when operation processing has started.'
+        processingEnd:
+          type: string
+          format: date-time
+          description: 'Timestamp when operation processing has finished.'
+    OperationStatus:
+      type: string
+      enum:
+        - OK
+        - NOK
+        - ERROR
+        - PENDING
+        - UNKNOWN
+      description: 'Status of the operation.'
+    Payment:
+      type: object
+      properties:
+        dueDate:
+          type: string
+          format: date
+        paymentAmount:
+          $ref: '#/components/schemas/Amount'
+    PaymentInformation:
+      type: object
+      properties:
+        paymentReference:
+          type: string
+        account:
+          $ref: '#/components/schemas/Account'
+        paymentMethod:
+          $ref: '#/components/schemas/PaymentMethod'
+        confirmedPaymentOption:
+          $ref: '#/components/schemas/PaymentOption'
+    PaymentMethod:
+      type: string
+      enum:
+        - DIRECT_DEBIT
+        - BANK_TRANSFER
     PaymentOption:
       type: object
       properties:
@@ -913,126 +905,107 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Contract'
-    Payment:
+    Person:
+      description: 'Properties of a natural person.'
       type: object
       properties:
-        dueDate:
+        salutation:
+          type: string
+          pattern: "^[\\p{IsLatin}. ]*$"
+        firstName:
+          type: string
+          pattern: "^[\\p{IsLatin} ]*$"
+        lastName:
+          type: string
+          pattern: "^[\\p{IsLatin}\\-' ]*$"
+        birthdate:
           type: string
           format: date
-        paymentAmount:
-          $ref: '#/components/schemas/Amount'
-    Amount:
+        socialId:
+          type: string
+          pattern: '^[0-9*-]{0,11}$'
+        occupation:
+          $ref: '#/components/schemas/Occupation'
+    ProductType:
+      type: string
+      enum:
+        - INVOICE
+        - INSTALLMENT
+        - MONTHLY_INVOICE
+    PurchaseInformation:
+      description: 'Describes the current state of a purchase.'
       type: object
-      description: ''
       properties:
-        amount:
-          type: integer
-          format: int64
-          description: Amount in cents
+        purchaseId:
+          type: string
+        state:
+          $ref: '#/components/schemas/PurchaseState'
         currency:
           $ref: '#/components/schemas/Currency'
-      required:
-        - amount
-        - currency
-    Contract:
+        authorizedAmount:
+          $ref: '#/components/schemas/Amount'
+        capturedAmount:
+          $ref: '#/components/schemas/Amount'
+        remainingCaptureAmount:
+          $ref: '#/components/schemas/Amount'
+        refundedAmount:
+          $ref: '#/components/schemas/Amount'
+        remainingRefundableAmount:
+          $ref: '#/components/schemas/Amount'
+        purchaseAmount:
+          $ref: '#/components/schemas/Amount'
+        consumer:
+          $ref: '#/components/schemas/Consumer'
+        consumerVerification:
+          $ref: '#/components/schemas/ConsumerVerification'
+        merchantReference:
+          $ref: '#/components/schemas/MerchantReference'
+        paymentInformation:
+          $ref: '#/components/schemas/PaymentInformation'
+        paymentOptions:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentOption'
+        captures:
+          description: 'Performed captures.'
+          type: array
+          items:
+            $ref: '#/components/schemas/OperationInformation'
+        refunds:
+          description: 'Performed refunds.'
+          type: array
+          items:
+            $ref: '#/components/schemas/OperationInformation'
+        documents:
+          description: 'Static documents.'
+          type: array
+          items:
+            $ref: '#/components/schemas/Document'
+        metaData:
+          description: 'Additional information provided as a key value map.'
+          type: object
+          additionalProperties:
+            type: string
+    PurchaseOperationResponse:
       type: object
       properties:
-        name:
-          type: string
-        type:
-          $ref: '#/components/schemas/DocumentType'
-        id:
-          type: string
-        url:
-          type: string
-    Document:
-      type: object
-      properties:
-        name:
-          type: string
-        url:
-          type: string
-    AchAccountType:
+        result:
+          $ref: '#/components/schemas/OperationResult'
+        purchase:
+          $ref: '#/components/schemas/PurchaseInformation'
+    PurchaseState:
       type: string
       enum:
-        - SAVINGS
-        - CHECKING
-    PurchaseAuthorizationRequest:
-      type: object
-      description: ''
-      title: ''
-      properties:
-        purchaseId:
-          type: string
-          description: purchaseId received from initialize or authorize response
-        phone:
-          type: string
-          pattern: '^[+]?[0-9]*$'
-          description: "If method 'SMS' is chosen, a phone number must be provided and will receive a message to start the verify process"
-        method:
-          $ref: '#/components/schemas/MethodType'
-        successUrl:
-          type: string
-          description: Redirect URL for the merchant after finishing the flow
-        callbackUrl:
-          type: string
-          description: 'After successfully finishing the flow, this URL will receive a callback to indicate completion to the merchant'
-      required:
-        - purchaseId
-        - method
-    CaptureRequest:
-      type: object
-      title: ''
-      properties:
-        purchaseId:
-          type: string
-          description: purchaseId received from initialize or authorize response
-        orderId:
-          type: string
-          description: orderId received from initialize or authorize response
-        fulfillmentAmount:
-          $ref: '#/components/schemas/Amount'
-        closePurchase:
-          type: boolean
-          description: flag to indicate if purchase needs to be closed
-          x-jsinterop-ignore: true
-        deliveryInformation:
-          $ref: '#/components/schemas/DeliveryInformation'
-      required:
-        - fulfillmentAmount
-      description: ''
-    DeliveryInformation:
-      type: object
-      properties:
-        expectedShippingDate:
-          type: string
-          format: date
-          description: ''
-        logisticsProvider:
-          $ref: '#/components/schemas/LogisticsProvider'
-        trackingNumber:
-          type: string
-          description: trackingNumber of logistics provider
-    LogisticsProvider:
-      type: string
-      enum:
-        - DHL
-        - POST
-        - DPD
-        - GLS
-    RefundRequest:
-      type: object
-      properties:
-        purchaseId:
-          type: string
-          description: purchaseId received from initialize or authorize response
-        refundAmount:
-          $ref: '#/components/schemas/Amount'
-        reason:
-          $ref: '#/components/schemas/RefundReason'
-      required:
-        - purchaseId
-        - refundAmount
+        - INITIALIZED
+        - PRECHECKED
+        - DECLINED
+        - AUTHORIZED
+        - AUTHORIZATION_PENDING
+        - CANCELLED
+        - FULFILLMENT
+        - BLOCKED
+        - TIMED_OUT
+        - CLOSED
     RefundReason:
       type: string
       enum:
@@ -1041,10 +1014,47 @@ components:
         - REFUND_OBLIGINGNESS
         - MERCHANT_CAN_NOT_DELIVER_GOODS
       default: CUSTOMER_REFUND
-    MethodType:
+    RefundPurchaseRequest:
+      type: object
+      required:
+        - purchaseId
+        - refundAmount
+      properties:
+        purchaseId:
+          type: string
+          description: 'PurchaseId received from initializePurchase or authorizePurchase response.'
+        refundAmount:
+          $ref: '#/components/schemas/Amount'
+        reason:
+          $ref: '#/components/schemas/RefundReason'
+    Sepa:
+      type: object
+      properties:
+        iban:
+          type: string
+          pattern: "^[\\p{IsLatin}0-9 ]*$"
+        bic:
+          type: string
+    StatusCode:
       type: string
-      enum:
-        - SMS
-        - URL
-      description: Method in which the end user is redirected to the Instore Selfservice application
+      description: |-
+        Code:
+         * `0.0.0` - "Operation performed sucessfully"
+         * `0.0.1` - "Duplicate request: Operation already performed sucessfully"
+         * `1.0.0` - "Operation performed sucessfully. Final result pending"
+         * `2.0.0` - "Operation permanently declined"
+         * `2.1.0` - "Operation declined (retryable)"
+         * `2.1.1` - "Customer has exceeded limit"
+         * `3.0.0` - "Missing field"
+         * `3.1.0` - "Invalid input data"
+         * `4.0.0` - "Incorrect workflow state"
+         * `4.1.0` - "Wrong purchase state"
+         * `4.2.0` - "Unknown reference"
+         * `4.3.0` - "Invalid product"
+         * `4.4.0` - "Duplicate request"
+         * `4.5.0` - "User not authorized"
+         * `4.5.1` - "User not authorized. Product inactive"
+         * `5.0.0` - "Internal error"
+         * `5.1.0` - "Processing service unavailable (retryable)"
+         * `6.0.0` - "Internal error: Operation result undefined"
   securitySchemes: {}
