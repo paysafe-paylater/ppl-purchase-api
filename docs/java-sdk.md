@@ -10,7 +10,7 @@ The Paysafe Pay Later Java SDK can be installed using [Maven](http://maven.apach
   <version>x.y.z</version>
 </dependency>
 
-If Maven is not a possibility, download the latest version of the SDK from GitHub. Retrieve the `paysafe-sdk-java-x.y.z-bin.zip` file from the [releases](https://github.com/Paysafe?/paysafe-sdk-java/releases) page, where `x.y.z` is the version number.
+If Maven is not a possibility, download the latest version of the SDK from GitHub. Retrieve the `paysafe-sdk-java-x.y.z-bin.zip` file from the [releases](https://github.com/Paysafecard-DEV/ppl-purchase-sdk) page, where `x.y.z` is the version number.
 Add the JAR files inside the `lib` folder of your project, except for `paysafe-sdk-java-x.y.z-sources.jar`
 
 The package requires the following dependencies, which will automatically be installed when using maven:
