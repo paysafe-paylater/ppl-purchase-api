@@ -1,5 +1,5 @@
-# Introduction
-The Java server SDK provides a simplified way to integrate with the Paysafe Pay Later instore purchase API. The source code of this SDK can be found on [Github](https://github.com). This documentation contains information on how to get started with the Paysafe Pay Later Java SDK.
+# Java SDK
+The Java server SDK provides a simplified way to integrate with the Paysafe Pay Later instore purchase API. The source code of this SDK can be found on [Github](https://github.com/Paysafecard-DEV/ppl-purchase-sdk). This documentation contains information on how to get started with the Paysafe Pay Later Java SDK.
 
 # Installation
 The Paysafe Pay Later Java SDK can be installed using [Maven](http://maven.apache.org/) by including the following to the POM file:
@@ -10,7 +10,7 @@ The Paysafe Pay Later Java SDK can be installed using [Maven](http://maven.apach
   <version>x.y.z</version>
 </dependency>
 
-If Maven is not a possibility, download the latest version of the SDK from GitHub. Retrieve the `paysafe-sdk-java-x.y.z-bin.zip` file from the [releases](https://github.com/Paysafecard-DEV/ppl-purchase-sdk) page, where `x.y.z` is the version number.
+If Maven is not a possibility, download the latest version of the SDK from GitHub. Retrieve the `paysafe-sdk-java-x.y.z-bin.zip` file from the [releases](https://github.com/Paysafecard-DEV/ppl-purchase-sdk/releases) page, where `x.y.z` is the version number.
 Add the JAR files inside the `lib` folder of your project, except for `paysafe-sdk-java-x.y.z-sources.jar`
 
 The package requires the following dependencies, which will automatically be installed when using maven:
@@ -28,7 +28,7 @@ The Paysafe Pay Later Java SDK can be used with a secret key or authorization to
 Secret key authentication is recommended for server to server communication and authorization token authentication is recommended for client side applications or apps.
 
 ## Secret key
-Multiple secret keys can be requested and each key has either the "Installment" or "Invoice" product configured. One of the secret keys will always be the default key. The default key can be used to decrypt incoming [webhook](#webhooks) messages.
+Multiple secret keys can be requested and each key can have one or multiple products configured to it. One of the secret keys will always be the default key. The default key can be used to decrypt incoming [webhook](#webhooks) messages.
 
 **Make sure to never use the secret key in a client side application or mobile app!**
 

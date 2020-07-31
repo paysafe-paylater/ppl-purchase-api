@@ -13,7 +13,7 @@ info:
 
     **Secret key**
 
-    Multiple 'paysafe-pl-secret-key's can be requested. Each key is linked to either the Installment or Invoice product.
+    Multiple 'paysafe-pl-secret-key's can be requested. Each key can have one or mutiple products configured to it.
     There will always be one default key. That one can be used to decrypt incoming webhooks.
   version: 1.0.0
   license:
@@ -482,8 +482,6 @@ paths:
 servers:
   - url: 'https://test-gateway.payolution.com'
     description: 'Test.'
-  - url: 'https://gateway.payolution.com'
-    description: 'Production.'
 components:
   schemas:
     Account:
