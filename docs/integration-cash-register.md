@@ -6,6 +6,8 @@ Integration with a cash register takes little effort and provides secure confirm
 
 ## Start at cash register
 
+![Start at cash register](./../assets/images/cash-register-flow.png "Start at cash register")
+
 ### 1. Initialize
 
 This flow starts with the cash register specifying the amount of the order and invoking the initialize endpoint with the amount and currency. Optionaly, customer data can be provided to ease the application process for the customer. The success response of the initialize endpoint returns the **purchaseId** needed for the authorize endpoint.
@@ -43,7 +45,38 @@ ResponseWithAuthorization<PurchaseOperationResponse> purchaseResponse =
 // Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9
 String accessToken = purchaseResponse.getAuthorization();
 
-PurchaseOperationResponse reponse = purchaseResponse.getResponse();
+PurchaseOperationResponse response = purchaseResponse.getResponse();
+```
+
+**PHP SDK**
+
+```php
+$request = new InitializePurchaseRequest(
+  new Amount(50000, new Currency(Currency::EUR))
+);
+
+$purchaseResponse = $purchaseLifecycleApi->initializePurchase($request, $secretKey);
+
+// Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9
+$accessToken = $purchaseResponse->getAuthorization();
+
+$response = $purchaseResponse->getResponse();
+```
+
+**Node.js SDK**
+
+```javascript
+const request = new InitializePurchaseRequest()
+  .withPurchaseAmount(new Amount()
+    .withAmount(50000)
+    .withCurrency(Currency.EUR));
+
+const purchaseResponse = await purchaseApi.intializePurchase(request, secretKey);
+
+// Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9
+const accessToken = purchaseResponse.authorization;
+
+const response = purchaseResponse.response;
 ```
 
 ### 2. Authorize
@@ -60,11 +93,9 @@ Once a succesful initialize response has been received, the **purchaseId** can b
     "Content-Type": "application/json"
   },
   "body": {
-    "purchaseId": "CID-owfqe6dvnhsvp4mkfxuw",
+    "purchaseId": "CID-kdifr9ho54zavijvr9jv",
     "phone": "+4300000000000",
-    "method": "SMS",
-    "successUrl": "https://example.com/successUrl",
-    "callbackUrl": "https://example.com/callbackUrl"
+    "method": "SMS"
   }
 }
 ```
@@ -73,14 +104,39 @@ Once a succesful initialize response has been received, the **purchaseId** can b
 
 ```java
 AuthorizePurchaseRequest request = new AuthorizePurchaseRequest()
-  .withPurchaseId(purchaseId)
+  .withPurchaseId("CID-kdifr9ho54zavijvr9jv")
+  .withMethod(MethodType.SMS)
+  .withPhone("+4300000000000");
+
+PurchaseOperationResponse response = 
+  purchaseAuthorizationApi.authorizePaylater(request, secretKey);
+```
+
+**PHP SDK**
+
+```php
+$request = new AuthorizePurchaseRequest(
+  'CID-kdifr9ho54zavijvr9jv',
+  new MethodType(MethodType::SMS),
+  '+4300000000000',
+  'https://example.com/successUrl',
+  'https://example.com/callbackUrl'
+);
+
+$response = $purchaseAuthorizationApi->authorizePayLater($request, $secretKey);
+```
+
+**Node.js SDK**
+
+```javascript
+const request = new AuthorizePurchaseRequest()
+  .withPurchaseId("CID-kdifr9ho54zavijvr9jv")
   .withMethod(MethodType.SMS)
   .withPhone("+4300000000000")
   .withSuccessUrl("https://example.com/successUrl")
   .withCallbackUrl("https://example.com/callbackUrl");
 
-PurchaseOperationResponse response = 
-  purchaseAuthorizationApi.authorizePaylater(request, secretKey);
+const purchaseOperationResponse = await purchaseAuthorizationApi.authorizePayLater(request, secretKey);
 ```
 
 ### 3. Paysafe Pay Later customer application
@@ -120,12 +176,36 @@ CapturePurchaseRequest captureRequest = new CapturePurchaseRequest()
     .withAmount(50000L)
     .withCurrency(Currency.EUR));
 
-PurchaseOperationResponse response = purchaseApi.capture(request, secretKey);
+PurchaseOperationResponse response = purchaseApi.capturePurchase(request, secretKey);
+```
+
+**PHP SDK**
+
+```php
+$request = (new CapturePurchaseRequest(
+	new Amount(50000, New Currency(Currency::EUR))
+))->setOrderId('75761090');
+
+$response = $purchaseAuthorizationApi->capturePurchase($request, $secretKey);
+```
+
+**Node.js SDK**
+
+```javascript
+const request = new CapturePurchaseRequest()
+  .withOrderId("75761090")
+  .withFulfillmentAmount(new Amount()
+    .withAmount(50000)
+    .withCurrency(Currency.EUR));
+
+const purchaseOperationResponse = await purchaseApi.capturePurchase(request, secretKey);
 ```
 
 ## Start with webapp
 
 This has the least amount of integration needed from the cash register as it will only need to handle capture requests.
+
+![Start with webapp](./../assets/images/cash-register-flow-start-with-webapp.png "Start with webapp")
 
 ### 1. Initialize & authorize
 
@@ -168,5 +248,27 @@ CapturePurchaseRequest captureRequest = new CapturePurchaseRequest()
     .withAmount(50000L)
     .withCurrency(Currency.EUR));
 
-PurchaseOperationResponse response = purchaseApi.capture(request, secretKey);
+PurchaseOperationResponse response = purchaseApi.capturePurchase(request, secretKey);
+```
+
+**PHP SDK**
+
+```php
+$request = (new CapturePurchaseRequest(
+	new Amount(50000, New Currency(Currency::EUR))
+))->setOrderId('75761090');
+
+$response = $purchaseAuthorizationApi->capturePurchase($request, $secretKey);
+```
+
+**Node.js SDK**
+
+```javascript
+const request = new CapturePurchaseRequest()
+  .withOrderId("75761090")
+  .withFulfillmentAmount(new Amount()
+    .withAmount(50000)
+    .withCurrency(Currency.EUR));
+
+const purchaseOperationResponse = await purchaseApi.authorizePayLater(request, secretKey);
 ```

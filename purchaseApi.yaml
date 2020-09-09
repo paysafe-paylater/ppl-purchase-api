@@ -1037,9 +1037,9 @@ components:
       type: string
       description: |-
         Code:
-         * `0.0.0` - "Operation performed sucessfully"
-         * `0.0.1` - "Duplicate request: Operation already performed sucessfully"
-         * `1.0.0` - "Operation performed sucessfully. Final result pending"
+         * `0.0.0` - "Operation performed successfully"
+         * `0.0.1` - "Duplicate request: Operation already performed successfully"
+         * `1.0.0` - "Operation performed successfully. Final result pending"
          * `2.0.0` - "Operation permanently declined"
          * `2.1.0` - "Operation declined (retryable)"
          * `2.1.1` - "Customer has exceeded limit"

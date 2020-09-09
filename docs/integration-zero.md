@@ -2,6 +2,8 @@
 
 The zero integration allows for instore payments without any integration with one of your systems. The only thing needed is access to the webapp of Paysafe. (Contact your account manager for details on the webapp)
 
+![Zero integration flow](./../assets/images/zero-integration-flow.png "Zero integration flow")
+
 ### 1. Create transaction
 The flow starts with logging into the webapp of Paysafe and creating a new transaction. An amount and customer phone number must be provided to create the transaction.
 

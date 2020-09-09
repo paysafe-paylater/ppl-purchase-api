@@ -123,6 +123,19 @@ PurchaseAuthorizationApi purchaseAuthorizationApi = new PurchaseAuthorizationApi
 LegalDocumentsApi legalDocumentsApi = new LegalDocumentsApi(communicator);
 ```
 
+## Responses
+All endpoints return the same response in the form of a PurchaseOperationResponse object. This object contains all data about the transaction like the status, authorized/captured amount and other metadata. The initialize endpoint however, returns this response differently. The initialize endpoint also returns an access token, and thus the data for both the PurchaseOperationResponse and access token have been wrapped in a seperate object. Below an example of how to handle this case.
+
+```java
+ResponseWithAuthorization<PurchaseOperationResponse> purchaseResponse = 
+  purchaseApi.intializePurchase(request, secretKey);
+
+// Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9
+String accessToken = purchaseResponse.getAuthorization();
+
+PurchaseOperationResponse response = purchaseResponse.getResponse();
+```
+
 # Webhooks
 Incoming  webhooks messages need to be validated based on the default secret key. The SDK provides a helper class that can be used to determine if the incoming webhook is valid and decodes it into a PurchaseOperationResponse object. The incoming webhook can be marshalled into a WebhookMessage object which can then be used in the decrypt method. Below an example of decrypting an incoming webhook.
 
@@ -252,6 +265,8 @@ AuthorizePurchaseRequest request = new AuthorizePurchaseRequest()
 
 PurchaseOperationResponse response = 
   purchaseAuthorizationApi.authorizePaylater(request, secretKey);
+
+String authUrl = response.getPurchase().getMetaData().get("INSTORE_SELFSERVICE_AUTH_URL");
 ```
 
 #### Authorize with authorization token
@@ -270,6 +285,8 @@ AuthorizePurchaseRequest request = new AuthorizePurchaseRequest()
 
 PurchaseOperationResponse response = 
   purchaseAuthorizationApi.authorizePayLaterWithAuthorization(request, authorizationToken);
+
+String authUrl = response.getPurchase().getMetaData().get("INSTORE_SELFSERVICE_AUTH_URL");
 ```
 
 The value of variable `authorizationToken` is part of the `ResponseWithAuthorization` response, received when calling the [initialize](#initialize) api endpoint.
@@ -315,6 +332,12 @@ InitializePurchaseRequest request = new InitializePurchaseRequest()
 
 ResponseWithAuthorization<PurchaseOperationResponse> purchaseResponse = 
   purchaseApi.intializePurchase(request, secretKey);
+
+// Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9
+String accessToken = purchaseResponse.getAuthorization();
+
+PurchaseOperationResponse response = purchaseResponse.getResponse();
+String purchaseId = response.getPurchaseId();
 ```
 
 #### Initialize with consumer data
@@ -341,6 +364,12 @@ InitializePurchaseRequest request = new InitializePurchaseRequest(purchaseAmount
 
 ResponseWithAuthorization<PurchaseOperationResponse> purchaseResponse = 
   purchaseApi.intializePurchase(request, secretKey);
+
+// Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9
+String accessToken = purchaseResponse.getAuthorization();
+
+PurchaseOperationResponse response = purchaseResponse.getResponse();
+String purchaseId = response.getPurchaseId();
 ```
 
 ### Purchase Info
