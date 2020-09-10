@@ -1,5 +1,5 @@
 # Node.js SDK
-The Node.js server SDK provides a simplified way to integrate with the Paysafe Pay Later instore purchase API. The source code of this SDK can be found on [Github](https://github.com/Paysafecard-DEV/ppl-purchase-sdk). This documentation contains information on how to get started with the Paysafe Pay Later Javascript SDK.
+The Node.js server SDK provides a simplified way to integrate with the Paysafe Pay Later instore purchase API. The source code of this SDK can be found on [Github](https://github.com/Paysafecard-DEV/ppl-purchase-sdk-nodejs). This documentation contains information on how to get started with the Paysafe Pay Later Javascript SDK.
 
 # Installation
 The Paysafe Pay Later Node.js SDK can be installed using [NPM](https://www.npmjs.com/) by including the following to the package.json file:

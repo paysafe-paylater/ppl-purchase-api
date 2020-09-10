@@ -1,5 +1,5 @@
 # PHP SDK
-The Paysafe Pay Later PHP SDK provides a simplified way to integrate with the Paysafe Pay Later instore purchase API. The source of this SDK can be found on [Github](https://github.com/Paysafecard-DEV/ppl-purchase-sdk). This documentation contains information on how to get started with the Paysafe Pay Later PHP SDK.
+The Paysafe Pay Later PHP SDK provides a simplified way to integrate with the Paysafe Pay Later instore purchase API. The source of this SDK can be found on [Github](https://github.com/Paysafecard-DEV/ppl-purchase-sdk-php). This documentation contains information on how to get started with the Paysafe Pay Later PHP SDK.
 
 # Installation
 The Paysafe Pay Later PHP SDK can be installed using composer:
